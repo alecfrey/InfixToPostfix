@@ -62,7 +62,7 @@ public class Infix2Postfix {
 					}
 					
 					//if (stack.isEmpty() || precedence > operantPrecedence(stack.peek())) {
-					//	stack.push(c);
+					//	stack.push(c)
 					//} 
 	
 			}
