@@ -9,102 +9,146 @@ import java.util.Stack;
 // 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
 public class Infix2Postfix {
 	
+	private static int parenthesis = 0;
+
 	public static void main(String[] args) throws FileNotFoundException {
+		
 		File input = new File("input.txt");
 		File output = new File("output.txt");
 		PrintWriter outputPrinter = new PrintWriter(output);
-		
+
 		// temp store operators awaiting their right hand side operand
 		Stack<Character> stack = new Stack<>();
-		
+
 		Scanner s = new Scanner(input);
-		String result = "";
 
 		// Convert each input line
 		while (s.hasNextLine()) {
-			String toPostfix = s.nextLine();
-			
+			String postfixString = "";
+			String currentInputLine = s.nextLine();
+
 			// Loop through sorting numbers and operants
-			for (int i = 0; i < toPostfix.length(); i++) {
-				char c = toPostfix.charAt(i);
+			for (int i = 0; i < currentInputLine.length(); i++) {
+				char c = currentInputLine.charAt(i);
 				
-				// Check if current char is number
-				if (Character.isDigit(c)) {
+				//Check if negative sign attached to number & that i + 1 isn't past string length
+				if ((c == '-') && (i + 1 < currentInputLine.length()) && (Character.isDigit(currentInputLine.charAt(i + 1)))) {
 					String num = "" + c;
-					
-					// Check if next char is number also (Example: 125)
-					while(i + 1 < toPostfix.length() && Character.isDigit(toPostfix.charAt(i+1))) {
+
+					// Check if next character is a number also (Example: 125)
+					while (i + 1 < currentInputLine.length() && Character.isDigit(currentInputLine.charAt(i + 1))) {
 						i++;
-						num += toPostfix.charAt(i);
+						num += currentInputLine.charAt(i);
 					}
-										
-					printToOutput(num, outputPrinter);
-					result += num;
+					postfixString += num + " ";
 					
-				} else {
-					//If the precedence of the scanned operator is greater than the precedence 
-					//of the operator in the stack(or the stack is empty or the stack contains a ‘(‘ ), push it.
-					
-					if (c == '(') {
-						stack.push(c);
-						
-					} else if (c == ')') {
-						while (!stack.isEmpty() && stack.peek() != '(') {
-							result += stack.pop();
-							stack.pop();
+				// Check if positive number
+				} else if (Character.isDigit(c)) {
+						String num = "" + c;
+
+						// Check if next character is a number also (Example: 125)
+						while (i + 1 < currentInputLine.length() && Character.isDigit(currentInputLine.charAt(i + 1))) {
+							i++;
+							num += currentInputLine.charAt(i);
 						}
+						postfixString += num + " ";
+
+				// Check if character is open parenthesis
+				} else if (c == '(') {
+					if (parenthesis < 0) {
+						postfixString = "Error: no closing parenthesis detected";
+						break;
+					}
+					
+					stack.push(c);
+					numParentheses(1);
+
+				// Check if character is close parenthesis=
+				} else if (c == ')') {
+					if (parenthesis > 0) {
+						numParentheses(-1);
+
+						while (!stack.isEmpty() && stack.peek() != '(') {
+							postfixString += stack.pop() + " ";
+							//System.out.println(postfixString);
+						}
+						stack.pop();
 						
 					} else {
-						while (!stack.isEmpty() && prec(c) <= prec(stack.peek())) {
-							result += stack.pop();
-						}
-						stack.push(c);
+						postfixString = "Error: no opening parenthesis detected";
+						break;
 					}
-					
-					//if (stack.isEmpty() || precedence > operantPrecedence(stack.peek())) {
-					//	stack.push(c)
-					//} 
-	
+
+				// Character must be operator
+				} else if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '^'){
+					while ((!stack.isEmpty()) && (prec(c) <= prec(stack.peek()))) {
+						postfixString += stack.pop() + " ";
+						//System.out.println(postfixString);
+					}
+					stack.push(c);
+				}
 			}
-				
-				/**
-				 * while (!opStack.isEmpty() && prec(x) <= prec(opStack.peek())) {
-				 * 		y = opStack.pop();
-				 * 		append y to postfix
-				 * }
-				 * opStack.push(x);
-				 */
-	
+
+			// Pop operators
+			while (!stack.isEmpty()) {
+				postfixString += stack.pop() + " ";
+				//System.out.println(postfixString);
+			}
 			
+			System.out.println();
+			if (postfixString.charAt(postfixString.length() - 1) == ' ') {
+				int end = postfixString.length() - 1;
+				postfixString = postfixString.substring(0, end);
 			}
-			/**
-			if (error detected in infix) {
-				print first detected error
+
+			// Check if all parentheses have been closed 
+			if (parenthesis > 0) {
+				printToOutput("Error: no closing parenthesis detected", outputPrinter);
+			} else if (parenthesis < 0) {
+				printToOutput("Error: no opening parenthesis detected", outputPrinter);
+			} else {
+				printToOutput(postfixString, outputPrinter);
+			}
 			
+			parenthesis = 0;
+
+			if (s.hasNextLine()) {
+				printToOutput("\n", outputPrinter);
 			}
-			*/
 		}
-		
+
 		s.close();
 		stack.forEach(System.out::println);
 		outputPrinter.close();
 	}
-	
-	
+
 	private static void printToOutput(String input, PrintWriter outputPrinter) {
-		outputPrinter.print(input + " ");
-	
+		outputPrinter.print(input);
 	}
-	
+
 	private static int prec(char operant) {
-		if (operant == '+' || operant == '-' ) {
+		if (operant == '+' || operant == '-') {
 			return 1;
-		} else if (operant == '*' || operant == '/' ) {
+		} else if (operant == '*' || operant == '/' || operant == '%') {
 			return 2;
 		} else if (operant == '^') {
 			return 3;
 		}
 		return -1;
+	}
+	
+	/**
+	 * Keeps track of number of open and closed parentheses.
+	 * @param type
+	 * @return
+	 */
+	private static int numParentheses(int type) {
+		if (type == 1) {
+			parenthesis++;
+		} else {
+			parenthesis--;
+		}
+		return parenthesis;
 	}
 
 }
