@@ -8,11 +8,11 @@ import java.util.Stack;
 
 // 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
 public class Infix2Postfix {
-	
+
 	private static int parenthesis = 0;
 
 	public static void main(String[] args) throws FileNotFoundException {
-		
+
 		File input = new File("input.txt");
 		File output = new File("output.txt");
 		PrintWriter outputPrinter = new PrintWriter(output);
@@ -26,19 +26,29 @@ public class Infix2Postfix {
 		while (s.hasNextLine()) {
 			String postfixString = "";
 			String currentInputLine = s.nextLine();
+
+			// Empty input line, outputs empty line
+			if (currentInputLine == "") {
+				if (s.hasNextLine()) {
+					printToOutput("\n", outputPrinter);
+				}
+				continue;
+			}
+
 			boolean emptyParenthesis = false;
-			
+
 			boolean tooManyOperators = false;
 			int indexOfExtraOperator = 0;
-			
+
 			boolean tooManyOperands = false;
-			String extraOperand = "";
+			String extraOperand = null;
 
 			// Loop through sorting numbers and operants
 			for (int i = 0; i < currentInputLine.length(); i++) {
 				char c = currentInputLine.charAt(i);
-				
-				//Check if negative sign attached to number & that i + 1 isn't past string length
+
+				// Check if negative sign attached to number & that i + 1 isn't past string
+				// length
 				if ((c == '-') && (i + 1 < currentInputLine.length()) && (Character.isDigit(currentInputLine.charAt(i + 1)))) {
 					String num = "" + c;
 
@@ -48,8 +58,14 @@ public class Infix2Postfix {
 						num += currentInputLine.charAt(i);
 					}
 					postfixString += num + " ";
-					
-				// Check if positive number
+
+					extraOperand = tooManyOperands(currentInputLine, i);
+					if (extraOperand != null) {
+						tooManyOperands = true;
+						break;
+					}
+
+					// Check if positive number
 				} else if (Character.isDigit(c)) {
 					String num = "" + c;
 
@@ -59,30 +75,36 @@ public class Infix2Postfix {
 						num += currentInputLine.charAt(i);
 					}
 					postfixString += num + " ";
-					
-				// Check if character is open parenthesis
+
+					extraOperand = tooManyOperands(currentInputLine, i);
+					if (extraOperand != null) {
+						tooManyOperands = true;
+						break;
+					}
+
+					// Check if character is open parenthesis
 				} else if (c == '(') {
 					if (parenthesis < 0) {
 						parenthesis = 1;
 						break;
 					}
-					
+
 					stack.push(c);
 					numParentheses(1);
-					
+
 					// Check if empty subexpression
 					for (int j = i; j < currentInputLine.length(); j++) {
 						if (currentInputLine.charAt(j) == ')') {
-							emptyParenthesis = isEmptySubExpression(currentInputLine, i,j);
+							emptyParenthesis = isEmptySubExpression(currentInputLine, i, j);
 							break;
 						}
 					}
-					
-					if (emptyParenthesis) {
-						break;
-					}
 
-				// Check if character is close parenthesis=
+					// if (emptyParenthesis) {
+					// break;
+					// }
+
+					// Check if character is close parenthesis
 				} else if (c == ')') {
 					if (parenthesis > 0) {
 						numParentheses(-1);
@@ -91,14 +113,14 @@ public class Infix2Postfix {
 							postfixString += stack.pop() + " ";
 						}
 						stack.pop();
-						
+
 					} else {
 						parenthesis = -1;
 						break;
 					}
 
-				// Character must be operator
-				} else if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '^'){
+					// Character must be operator
+				} else if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '^') {
 					while ((!stack.isEmpty()) && (prec(c) <= prec(stack.peek()))) {
 						postfixString += stack.pop() + " ";
 					}
@@ -107,17 +129,26 @@ public class Infix2Postfix {
 						if (Character.isDigit(currentInputLine.charAt(j))) {
 							break;
 						} else if (isOperator(currentInputLine, j)) {
-							
+
 							// Makes sure extra operator isn't a minus related to a negative number
 							if (j + 1 < currentInputLine.length() && Character.isDigit(currentInputLine.charAt(j + 1))) {
 								break;
 							}
-							
 							tooManyOperators = true;
 							indexOfExtraOperator = j;
 							break;
-						}
+							 
+						} 
 					}
+				
+					// MAY BE BAD
+					currentInputLine = removeLastSpace(currentInputLine);
+					if (i == currentInputLine.length() - 1) {
+						tooManyOperators = true;
+						indexOfExtraOperator = i;
+						break;
+					}
+					
 					stack.push(c);
 				}
 			}
@@ -126,24 +157,38 @@ public class Infix2Postfix {
 			while (!stack.isEmpty()) {
 				postfixString += stack.pop() + " ";
 			}
-			
+
 			postfixString = removeLastSpace(postfixString);
 
-			// Last check to see if there is an empty subexpression and if all parentheses have been closed 
-			if (emptyParenthesis) {
+			// Checks if the current line starts with an operator
+			if (isFirstCharacterAnOperator(currentInputLine)) {
+				for (int i = 0; i < currentInputLine.length(); i++) {
+					if (isOperator(currentInputLine, i)) {
+						printToOutput("Error: too many operators (" + currentInputLine.charAt(i) + ")", outputPrinter);
+						break;
+					}
+				}
+			
+			// Last check to see if there is an empty subexpression and if all parentheses have been closed
+			} else if (emptyParenthesis) {
 				printToOutput("Error: no subexpression detected ()", outputPrinter);
+				
 			} else if (tooManyOperators) {
 				printToOutput("Error: too many operators (" + currentInputLine.charAt(indexOfExtraOperator) + ")", outputPrinter);
-			} else if (tooManyOperands) {
+				
+			} else if (tooManyOperands && extraOperand != "") {
 				printToOutput("Error: too many operands (" + extraOperand + ")", outputPrinter);
+				
 			} else if (parenthesis > 0) {
 				printToOutput("Error: no closing parenthesis detected", outputPrinter);
+				
 			} else if (parenthesis < 0) {
 				printToOutput("Error: no opening parenthesis detected", outputPrinter);
+				
 			} else {
 				printToOutput(postfixString, outputPrinter);
 			}
-			
+
 			parenthesis = 0;
 
 			if (s.hasNextLine()) {
@@ -169,9 +214,10 @@ public class Infix2Postfix {
 		}
 		return -1;
 	}
-	
+
 	/**
 	 * Keeps track of number of open and closed parentheses.
+	 * 
 	 * @param type
 	 * @return
 	 */
@@ -183,7 +229,7 @@ public class Infix2Postfix {
 		}
 		return parenthesis;
 	}
-	
+
 	private static boolean isEmptySubExpression(String inputLine, int start, int end) {
 		for (int i = start; i <= end; i++) {
 			if (Character.isDigit(inputLine.charAt(i))) {
@@ -192,22 +238,24 @@ public class Infix2Postfix {
 		}
 		return true;
 	}
-	
+
 	/**
 	 * Checks if current index is a operator
 	 * 
-	 * Starts at index of current operator and checks 
+	 * Starts at index of current operator and checks
+	 * 
 	 * @param input
 	 * @param start
 	 * @return
 	 */
 	private static boolean isOperator(String input, int index) {
-		if (input.charAt(index) == '+' || input.charAt(index) == '-' || input.charAt(index) == '*' || input.charAt(index) == '/' || input.charAt(index) == '%' || input.charAt(index) == '^') {
+		if (input.charAt(index) == '+' || input.charAt(index) == '-' || input.charAt(index) == '*'
+				|| input.charAt(index) == '/' || input.charAt(index) == '%' || input.charAt(index) == '^') {
 			return true;
 		}
 		return false;
 	}
-	
+
 	/**
 	 * If there is a space at end of current line it is deleted
 	 * 
@@ -217,22 +265,67 @@ public class Infix2Postfix {
 	 * @return input line with no end space
 	 */
 	private static String removeLastSpace(String s) {
-		if (s.charAt(s.length() - 1) == ' ') {
+		if (s.length() > 0 && s.charAt(s.length() - 1) == ' ') {
 			int end = s.length() - 1;
 			s = s.substring(0, end);
 		}
 		return s;
 	}
-	
-	/**
-	private static String findOperand(String input, int index) {
+
+	private static String tooManyOperands(String input, int index) {
+		String operand = "";
 		for (int i = index + 1; i < input.length(); i++) {
-			 if (isOperator(input, i) || i == input.length() - 1) {
-				 return "";
-			 } else if (Character.isDigit(input.charAt(i))) {
-				 return
-			 }
+			if (Character.isDigit(input.charAt(i))) {
+				operand += input.charAt(i);
+				while (i + 1 < input.length() && Character.isDigit(input.charAt(i + 1))) {
+					i++;
+					operand += input.charAt(i);
+				}
+				break;
+
+			} else if (isOperator(input, i) || i == input.length() - 1) {
+
+				// Check if operator detected is unary minus
+				if (isUnaryMinus(input, i)) {
+					operand += "-";
+					while (i + 1 < input.length() && Character.isDigit(input.charAt(i + 1))) {
+						i++;
+						operand += input.charAt(i);
+					}
+					return operand;
+				}
+				return operand = null;
+			}
 		}
+		return operand;
 	}
-	**/
+
+	/**
+	 * Check if detected "-" is a subtraction sign or a unary minus ("-15)
+	 * 
+	 * Returns true or false
+	 * 
+	 * @param input
+	 * @param minusIndex
+	 * @return
+	 */
+	private static boolean isUnaryMinus(String input, int minusIndex) {
+		if (minusIndex + 1 < input.length()) {
+			if (Character.isDigit(input.charAt(minusIndex + 1))) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean isFirstCharacterAnOperator(String input) {
+		for (int i = 0; i < input.length(); i++) {
+			if (isOperator(input, i) && !isUnaryMinus(input, i)) {
+				return true;
+			} else if (Character.isDigit(input.charAt(i))) {
+				return false;
+			}
+		}
+		return false;
+	}
 }
