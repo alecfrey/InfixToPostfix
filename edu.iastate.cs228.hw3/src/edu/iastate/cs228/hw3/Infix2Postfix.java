@@ -6,9 +6,22 @@ import java.io.PrintWriter;
 import java.util.Scanner;
 import java.util.Stack;
 
-// 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
+/**
+* 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
+* @author Alec Frey
+* 
+* This program converts from infix to postfix.
+* If there are errors in the given input expression, they are outputted instead of the converted expression.
+*
+*/
 public class Infix2Postfix {
 
+	/**
+	 * Stores number of parenthesis
+	 * If negative, too many closed parentheses
+	 * If positive, too many open parentheses
+	 * If zero, equal amount of open and closed parentheses
+	 */
 	private static int parenthesis = 0;
 
 	public static void main(String[] args) throws FileNotFoundException {
@@ -17,7 +30,7 @@ public class Infix2Postfix {
 		File output = new File("output.txt");
 		PrintWriter outputPrinter = new PrintWriter(output);
 
-		// temp store operators awaiting their right hand side operand
+		// temporarily stores operators
 		Stack<Character> stack = new Stack<>();
 
 		Scanner s = new Scanner(input);
@@ -47,8 +60,7 @@ public class Infix2Postfix {
 			for (int i = 0; i < currentInputLine.length(); i++) {
 				char c = currentInputLine.charAt(i);
 
-				// Check if negative sign attached to number & that i + 1 isn't past string
-				// length
+				// Check if negative sign attached to number & that i + 1 isn't past string length
 				if ((c == '-') && (i + 1 < currentInputLine.length()) && (Character.isDigit(currentInputLine.charAt(i + 1)))) {
 					String num = "" + c;
 
@@ -65,7 +77,7 @@ public class Infix2Postfix {
 						break;
 					}
 
-					// Check if positive number
+				// Check if positive number
 				} else if (Character.isDigit(c)) {
 					String num = "" + c;
 
@@ -82,7 +94,7 @@ public class Infix2Postfix {
 						break;
 					}
 
-					// Check if character is open parenthesis
+				// Check if character is open parenthesis
 				} else if (c == '(') {
 					if (parenthesis < 0) {
 						parenthesis = 1;
@@ -100,11 +112,7 @@ public class Infix2Postfix {
 						}
 					}
 
-					// if (emptyParenthesis) {
-					// break;
-					// }
-
-					// Check if character is close parenthesis
+				// Check if character is close parenthesis
 				} else if (c == ')') {
 					if (parenthesis > 0) {
 						numParentheses(-1);
@@ -119,9 +127,13 @@ public class Infix2Postfix {
 						break;
 					}
 
-					// Character must be operator
+				// Character must be operator
 				} else if (c == '+' || c == '-' || c == '*' || c == '/' || c == '%' || c == '^') {
 					while ((!stack.isEmpty()) && (prec(c) <= prec(stack.peek()))) {
+
+						if (prec(c) == prec(stack.peek()) && prec(c) == 3) {
+							break;
+						}
 						postfixString += stack.pop() + " ";
 					}
 					
@@ -136,19 +148,16 @@ public class Infix2Postfix {
 							}
 							tooManyOperators = true;
 							indexOfExtraOperator = j;
-							break;
-							 
+							break; 
 						} 
 					}
 				
-					// MAY BE BAD
 					currentInputLine = removeLastSpace(currentInputLine);
 					if (i == currentInputLine.length() - 1) {
 						tooManyOperators = true;
 						indexOfExtraOperator = i;
 						break;
 					}
-					
 					stack.push(c);
 				}
 			}
@@ -169,22 +178,26 @@ public class Infix2Postfix {
 					}
 				}
 			
-			// Last check to see if there is an empty subexpression and if all parentheses have been closed
+			// Prints this if there is an empty subexpression
 			} else if (emptyParenthesis) {
 				printToOutput("Error: no subexpression detected ()", outputPrinter);
 				
+			// Prints this if there are multiple operators in a row
 			} else if (tooManyOperators) {
 				printToOutput("Error: too many operators (" + currentInputLine.charAt(indexOfExtraOperator) + ")", outputPrinter);
 				
+			// Prints this if there are multiple operands in a row
 			} else if (tooManyOperands && extraOperand != "") {
 				printToOutput("Error: too many operands (" + extraOperand + ")", outputPrinter);
 				
+			// Last check to see if all parentheses have been opened/closed
 			} else if (parenthesis > 0) {
 				printToOutput("Error: no closing parenthesis detected", outputPrinter);
 				
 			} else if (parenthesis < 0) {
 				printToOutput("Error: no opening parenthesis detected", outputPrinter);
 				
+			// Prints expression as normal if no other conditions were met
 			} else {
 				printToOutput(postfixString, outputPrinter);
 			}
@@ -195,15 +208,30 @@ public class Infix2Postfix {
 				printToOutput("\n", outputPrinter);
 			}
 		}
-
 		s.close();
 		outputPrinter.close();
 	}
 
+	/**
+	 * Prints given input to output.txt using given PrintWriter
+	 * 
+	 * @param input
+	 * @param outputPrinter
+	 */
 	private static void printToOutput(String input, PrintWriter outputPrinter) {
 		outputPrinter.print(input);
 	}
 
+	/**
+	 * Returns precedence of given operant
+	 * 
+	 * Returns 1 if + or -
+	 * Returns 2 if * or / or %
+	 * Returns 3 if ^
+	 * 
+	 * @param operant
+	 * @return
+	 */
 	private static int prec(char operant) {
 		if (operant == '+' || operant == '-') {
 			return 1;
@@ -218,6 +246,8 @@ public class Infix2Postfix {
 	/**
 	 * Keeps track of number of open and closed parentheses.
 	 * 
+	 * Returns value of parenthesis.
+	 * 
 	 * @param type
 	 * @return
 	 */
@@ -230,6 +260,16 @@ public class Infix2Postfix {
 		return parenthesis;
 	}
 
+	/**
+	 * Checks if there is an empty sub expression using the given string, and start and end indexes.
+	 * 
+	 * Returns true or false.
+	 * 
+	 * @param inputLine
+	 * @param start
+	 * @param end
+	 * @return
+	 */
 	private static boolean isEmptySubExpression(String inputLine, int start, int end) {
 		for (int i = start; i <= end; i++) {
 			if (Character.isDigit(inputLine.charAt(i))) {
@@ -240,9 +280,9 @@ public class Infix2Postfix {
 	}
 
 	/**
-	 * Checks if current index is a operator
+	 * Checks if current index is a operator.
 	 * 
-	 * Starts at index of current operator and checks
+	 * Starts at index of current operator and checks.
 	 * 
 	 * @param input
 	 * @param start
@@ -257,9 +297,9 @@ public class Infix2Postfix {
 	}
 
 	/**
-	 * If there is a space at end of current line it is deleted
+	 * Removes space at end of current line if there is one.
 	 * 
-	 * Returns same string without space if there was one
+	 * Returns same string without space if there was one.
 	 * 
 	 * @param s
 	 * @return input line with no end space
@@ -272,6 +312,15 @@ public class Infix2Postfix {
 		return s;
 	}
 
+	/**
+	 * Used to check if there are too many operands in a row.
+	 * 
+	 * Returns extra operand if there is too many, else null.
+	 * 
+	 * @param input
+	 * @param index
+	 * @return
+	 */
 	private static String tooManyOperands(String input, int index) {
 		String operand = "";
 		for (int i = index + 1; i < input.length(); i++) {
@@ -318,6 +367,14 @@ public class Infix2Postfix {
 		return false;
 	}
 
+	/**
+	 * Checks if first character is an operator with a given input string.
+	 * 
+	 * Returns true or false.
+	 * 
+	 * @param input
+	 * @return
+	 */
 	private static boolean isFirstCharacterAnOperator(String input) {
 		for (int i = 0; i < input.length(); i++) {
 			if (isOperator(input, i) && !isUnaryMinus(input, i)) {
